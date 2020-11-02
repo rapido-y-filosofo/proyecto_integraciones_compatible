@@ -126,4 +126,4 @@ class ProcesoExtraccion(models.Model):
     status = models.CharField(max_length=50, blank=True, default="")
     message = models.TextField(blank=True, default="")
     historico = models.BooleanField(default=False)
-    fecha_licitaciones = models.CharField(max_length=50, null=False, blank=False, default="")
+    fecha_licitaciones = models.CharField(max_length=50, null=True, blank=True, default="")

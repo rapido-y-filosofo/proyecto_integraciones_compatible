@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from backend_integraciones.models import *
 
 from backend_integraciones.api_mercado_publico import api_mercado_publico
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import time
 import numpy as np
@@ -18,6 +18,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('-f', '--fecha', type=str, help='fecha para buscar licitaciones', )
+        parser.add_argument('--auto_fill', type=str, help='descargar licitaciones historicas a partir de la ultima fecha en BD', )
     
     def determinar_codigos_nuevos(self):
         d = datetime.today().strftime("%Y-%m-%d")
@@ -34,9 +35,9 @@ class Command(BaseCommand):
         codigos_buscar_en_api = np.setdiff1d(list(licitaciones_nuevas.keys()), codigos)
         return (codigos_buscar_en_api, licitaciones_nuevas)
     
-    def determinar_codigos_por_fecha(self, fecha_inicio='18-10-2019'):
+    def determinar_codigos_por_fecha(self, fecha_inicio='2019-10-18'):
         licitaciones = self.api.get_licitaciones_por_fecha(
-            fecha_inicio = datetime.strptime(fecha_inicio, '%d-%m-%Y')
+            fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d")
         )
 
         licitaciones_buscar_en_api = {}
@@ -48,9 +49,31 @@ class Command(BaseCommand):
             codigos_buscar_en_api.append(codigo)
 
         return (codigos_buscar_en_api, licitaciones_buscar_en_api)
+    
+    def get_min_fecha_historica(self):
+        fechas_procesos_historicos = [
+            datetime.strptime(d, '%Y-%m-%d') for d in set(
+                ProcesoExtraccion.objects.filter(historico=True).values_list(
+                    'fecha_licitaciones',
+                    flat=True
+                )
+            )
+        ]
+
+        if len(fechas_procesos_historicos) == 0:
+            return '2019-12-31'
+        ultima_fecha_descargada = min(fechas_procesos_historicos)
+        return (
+            ultima_fecha_descargada - timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+        
 
     def handle(self, *args, **options):
         fecha_inicio = options['fecha']
+        auto_fill = options['auto_fill']
+
+        if auto_fill:
+            fecha_inicio = self.get_min_fecha_historica()
 
         if fecha_inicio:
             codigos_buscar_en_api, licitaciones_nuevas = self.determinar_codigos_por_fecha(fecha_inicio)
