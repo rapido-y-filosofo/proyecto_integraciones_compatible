@@ -127,3 +127,26 @@ class ProcesoExtraccion(models.Model):
     message = models.TextField(blank=True, default="")
     historico = models.BooleanField(default=False)
     fecha_licitaciones = models.CharField(max_length=50, null=True, blank=True, default="")
+
+# se trae con Scrapy las garantias de una licitacion
+class LicitacionScraping(models.Model):
+    codigo_licitacion = models.CharField(max_length=50, null=False, blank=False)
+    garantia_seriedad_exige = models.BooleanField(default=False)
+    garantia_seriedad_monto = models.CharField(max_length=50, blank=True, default="")
+    garantia_seriedad_glosa = models.TextField(blank=True, default="")
+    garantia_seriedad_restitucion = models.TextField(blank=True, default="")
+    garantia_seriedad_fecha_vencimiento = models.CharField(max_length=50, blank=True, default="")
+    garantia_principal_titulo = models.CharField(max_length=50, blank=True, default="")
+    garantia_principal_monto = models.CharField(max_length=50, blank=True, default="")
+    garantia_principal_glosa = models.TextField(blank=True, default="")
+    garantia_principal_restitucion = models.TextField(blank=True, default="")
+    garantia_principal_fecha_vencimiento = models.CharField(max_length=50, blank=True, default="")
+    exigencias = models.TextField(blank=True, default="")
+    datos_json = models.TextField(blank=True, default="")
+
+class LicitacionParticipante(models.Model):
+    codigo_licitacion = models.CharField(max_length=50, null=False, blank=False)
+    proveedor = models.ForeignKey("Organismo", null=False, blank=False, on_delete=models.CASCADE)
+    nombre_oferta = models.TextField(blank=True, default="")
+    total_oferta = models.CharField(max_length=100, null=True, blank=True)
+    estado = models.CharField(max_length=100, null=True, blank=True)
