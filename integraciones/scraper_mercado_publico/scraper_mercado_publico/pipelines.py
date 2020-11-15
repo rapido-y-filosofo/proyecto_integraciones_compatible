@@ -94,11 +94,42 @@ class ScraperMercadoPublicoPipeline(object):
         licitacion_scraping.datos_json = json.dumps(item)
 
         licitacion_scraping.save()
+        m.UpdateLicitacionesBuffer.objects.filter(codigo_licitacion=item['codigo_licitacion']).delete()
+    
+    def procesar_detalle_rut(self, item):
+        rut_existe = m.RutContacto.objects.filter(rut=item['rut'])
+        if len(rut_existe) > 0:
+            rut_contacto = rut_existe[0]
+        else:
+            rut_contacto = m.RutContacto(rut=item['rut'])
+        
+        rut_contacto.encontrado = item['encontrado']
+
+        for dato_contacto in item['datos_contacto']:
+            if 'telefonos' in dato_contacto.keys():
+                rut_contacto.telefonos = ', '.join(dato_contacto['telefonos'])
+            if 'sitios_web' in dato_contacto.keys():
+                rut_contacto.sitios_web = ', '.join(dato_contacto['sitios_web'])
+            if 'contactos' in dato_contacto.keys():
+                rut_contacto.contactos = dato_contacto['contactos']
+        if type(item['datos_adicionales']).__name__ == 'dict':
+            rut_contacto.nombre_completo = item['datos_adicionales']['nombre_completo']
+            rut_contacto.rubro = item['datos_adicionales']['rubro']
+            rut_contacto.subrubro = item['datos_adicionales']['subrubro']
+            rut_contacto.actividad_economica = item['datos_adicionales']['actividad_economica']
+            rut_contacto.comuna = item['datos_adicionales']['comuna']
+            rut_contacto.region = item['datos_adicionales']['region']
+            rut_contacto.fecha_inicio_empresa = item['datos_adicionales']['fecha_inicio']
+            rut_contacto.tipo_contribuyente = item['datos_adicionales']['tipo_contribuyente']
+            rut_contacto.subtipo_contribuyente = item['datos_adicionales']['subtipo_contribuyente']
+        rut_contacto.save()
 
     def process_item(self, item, spider):
         if isinstance(item, dict):
             if item['tipo_item'] == 'licitacion_participante':
                 self.procesar_licitacion_participante(item)
-            else:
+            elif item['tipo_item'] == 'licitacion_garantia':
                 self.procesar_licitacion_garantia(item)
+            elif item['tipo_item'] == 'detalle_rut':
+                self.procesar_detalle_rut(item)
         return item

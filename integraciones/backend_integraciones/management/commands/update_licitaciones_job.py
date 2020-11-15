@@ -55,6 +55,7 @@ class Command(BaseCommand):
         return [(d - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(1, delta + 1)]
 
     def handle(self, *args, **options):
+        # ayer = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
         fecha_inicio = options['fecha'] if options['fecha'] else None
         delta = int(options['delta']) if options['delta'] else None
 
@@ -108,5 +109,7 @@ class Command(BaseCommand):
 
             self.stdout.write("### DELETE LICITACIONES MODELO ")
             Licitacion.objects.filter(codigo__in=licitaciones_bd_delete).delete()
+            for codigo_licitacion in licitaciones_bd_delete:
+                UpdateLicitacionesBuffer(codigo_licitacion = codigo_licitacion).save()
 
             self.stdout.write("PROCESS FINISHED")

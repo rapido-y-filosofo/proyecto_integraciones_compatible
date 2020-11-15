@@ -14,23 +14,48 @@ class SpiderMercadoPublico(scrapy.Spider):
     limit_n = 500
     fecha_inicio = '2019-12-31'
 
+    def get_min_fecha_historica(self):
+        fechas_procesos_historicos = [
+            datetime.strptime(d, '%Y-%m-%d') for d in set(
+                m.ProcesoExtraccion.objects.all().values_list(
+                    'fecha_licitaciones',
+                    flat=True
+                )
+            )
+        ]
+
+        if len(fechas_procesos_historicos) == 0:
+            return '2019-12-31'
+        ultima_fecha_descargada = min(fechas_procesos_historicos)
+        return (
+            ultima_fecha_descargada - timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+
     def start_requests(self):
         # codigos_licitacion = [
         #     '1155-27-R120',
-        #     '1069417-237-L120',
-        #     '1078177-48-LE20',
-        #     '1070620-65-LQ20',
-        #     '4351-111-LE19',
-        #     '1489-7-L120',
+        #     '1069417-237-L120'
         # ]
-
-        licitaciones = m.LicitacionRequest.objects.all()[:self.limit_n]
+        extraccion = m.ExtraccionEnCurso.objects.filter(en_curso=True)
+        if len(extraccion) == 1:
+            extraccion = extraccion[0]
+            fecha_inicio = extraccion.fecha_extraccion
+            licitaciones = m.LicitacionRequest.objects.select_related('proceso').filter(
+                proceso__fecha_licitaciones = fecha_inicio
+            )
+        else:
+            licitaciones = m.LicitacionRequest.objects.all()[:self.limit_n]
+        
         codigos_licitacion = list(licitaciones.values_list('codigo', flat=True))
-
+        codigos_buffer = list(m.UpdateLicitacionesBuffer.objects.all().values_list('codigo_licitacion', flat=True))
+        codigos_licitacion = codigos_licitacion + codigos_buffer
         for codigo in codigos_licitacion:
             url_licitacion = self.licitacion_url.format(codigo)
             url_licitacion = self.base_url.format(url_licitacion)
             yield scrapy.Request(url_licitacion, self.parse, meta={'codigo_licitacion': codigo})
+        extraccion.en_curso = False
+        extraccion.get_scraping_garantias = True
+        extraccion.save()
 
     def parse(self, response):
         codigo_licitacion = response.xpath('//*[@id="lblNumLicitacion"]/text()').get()

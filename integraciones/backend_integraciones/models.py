@@ -150,3 +150,32 @@ class LicitacionParticipante(models.Model):
     nombre_oferta = models.TextField(blank=True, default="")
     total_oferta = models.CharField(max_length=100, null=True, blank=True)
     estado = models.CharField(max_length=100, null=True, blank=True)
+
+class RutContacto(models.Model):
+    rut = models.CharField(max_length=30)
+    nombre_completo = models.TextField(blank=True, default="")
+    telefonos = models.TextField(blank=True, default="")
+    sitios_web = models.TextField(blank=True, default="")
+    contactos = models.TextField(blank=True, default="")
+    rubro = models.TextField(blank=True, default="")
+    subrubro = models.TextField(blank=True, default="")
+    actividad_economica = models.TextField(blank=True, default="")
+    comuna = models.TextField(blank=True, default="")
+    region = models.TextField(blank=True, default="")
+    fecha_inicio_empresa = models.TextField(blank=True, default="")
+    tipo_contribuyente = models.TextField(blank=True, default="")
+    subtipo_contribuyente = models.TextField(blank=True, default="")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+class ExtraccionEnCurso(models.Model):
+    fecha_extraccion = models.CharField(max_length=50, null=True, blank=True, default="")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    en_curso = models.BooleanField(default=False)
+    get_licitaciones = models.BooleanField(default=False)
+    get_scraping_garantias = models.BooleanField(default=False)
+
+class UpdateLicitacionesBuffer(models.Model):
+    # fecha_update = models.CharField(max_length=50, null=True, blank=True, default="")
+    codigo_licitacion = models.CharField(max_length=50, null=False, blank=False)

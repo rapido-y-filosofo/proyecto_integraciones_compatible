@@ -19,24 +19,31 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--historico', type=str, help='fecha para buscar licitaciones', )
+        parser.add_argument('--todas', type=str, help='insertar todas las licitaciones', )
 
     def handle(self, *args, **options):
         proceso_historico = options['historico']
+        todas_las_licitaciones = options['todas']
 
         if proceso_historico:
             historico = True
         else:
             historico = False
-        
-        licitaciones_por_insertar = LicitacionRequest.objects.select_related('proceso').filter(
-            esta_completa=True,
-            esta_en_bd=False,
-            proceso__historico=historico
-        )
 
-        proceso__id__max = licitaciones_por_insertar.aggregate(Max('proceso__id'))['proceso__id__max']
+        if todas_las_licitaciones:
+            licitaciones_por_insertar = LicitacionRequest.objects.filter(
+                esta_completa=True,
+                esta_en_bd=False
+            )
+        else:
+            licitaciones_por_insertar = LicitacionRequest.objects.select_related('proceso').filter(
+                esta_completa=True,
+                esta_en_bd=False,
+                proceso__historico=historico
+            )
+            proceso__id__max = licitaciones_por_insertar.aggregate(Max('proceso__id'))['proceso__id__max']
 
-        licitaciones_por_insertar = licitaciones_por_insertar.filter(proceso__id=proceso__id__max)
+            licitaciones_por_insertar = licitaciones_por_insertar.filter(proceso__id=proceso__id__max)
 
         total_licitaciones = len(licitaciones_por_insertar)
         i = 0

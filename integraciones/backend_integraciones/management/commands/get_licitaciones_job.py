@@ -87,6 +87,13 @@ class Command(BaseCommand):
             proceso = ProcesoExtraccion(historico=proceso_es_historico, fecha_licitaciones=fecha_inicio)
             proceso.save()
 
+            extraccion = ExtraccionEnCurso(
+                fecha_extraccion = fecha_inicio,
+                en_curso = True,
+                get_licitaciones = False
+            )
+            extraccion.save()
+
             licitaciones_completas = {}
             
             total_licitaciones = 0
@@ -128,4 +135,6 @@ class Command(BaseCommand):
             
             proceso.status = "FINISHED"
             proceso.save()
+            extraccion.get_licitaciones = True
+            extraccion.save()
             self.stdout.write("PROCESS FINISHED")
