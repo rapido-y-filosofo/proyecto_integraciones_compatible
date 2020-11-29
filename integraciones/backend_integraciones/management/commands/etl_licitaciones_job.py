@@ -13,6 +13,7 @@ import pandas as pd
 import json
 
 import unidecode
+from django.db.models import Count
 
 class Command(BaseCommand):
     help = 'inserta licitaciones en el modelo relacional de la app'
@@ -31,6 +32,9 @@ class Command(BaseCommand):
             historico = False
 
         if todas_las_licitaciones:
+            #parche para eliminar licitaciones_request con codigo duplicado
+            self.eliminar_duplicados()
+
             licitaciones_por_insertar = LicitacionRequest.objects.filter(
                 esta_completa=True,
                 esta_en_bd=False
@@ -344,3 +348,52 @@ class Command(BaseCommand):
 
     def normalizar_texto(self, texto):
         return unidecode.unidecode(texto.upper().strip())
+    
+    def eliminar_duplicados(self):
+        codigos_duplicados = LicitacionRequest.objects.values(
+            'codigo'
+        ).annotate(
+            codigo_count=Count('codigo')
+        ).filter(codigo_count__gt=1).values_list(
+            'codigo',
+            flat=True
+        )
+
+        for codigo in codigos_duplicados:
+            licitaciones_request = LicitacionRequest.objects.filter(
+                codigo=codigo
+            ).select_related('proceso').values(
+                'id',
+                'codigo',
+                'proceso_id',
+                'proceso__fecha_licitaciones',
+                'esta_en_bd',
+                'esta_completa'
+            )
+
+            fecha_mayor = datetime.strptime(
+                '1984-10-01', '%Y-%m-%d'
+            )
+
+            for licitacion_request in licitaciones_request:
+                fecha = datetime.strptime(
+                    licitacion_request['proceso__fecha_licitaciones'], '%Y-%m-%d'
+                )
+                if fecha > fecha_mayor:
+                    fecha_mayor = fecha
+
+            for licitacion_request in licitaciones_request:
+                fecha = datetime.strptime(
+                    licitacion_request['proceso__fecha_licitaciones'], '%Y-%m-%d'
+                )
+                if fecha < fecha_mayor:
+                    self.remove_licitacion_by_codigo(licitacion_request)
+                else:
+                    licitacion_resetear = LicitacionRequest.objects.filter(id=licitacion_request['id'])
+                    licitacion_resetear.esta_en_bd = False
+                    licitacion_resetear.save()
+    
+    def remove_licitacion_by_codigo(self, licitacion_request):
+        Licitacion.objects.filter(codigo=licitacion_request['codigo']).delete()
+        LicitacionRequest.objects.filter(id=licitacion_request['id']).delete()
+        

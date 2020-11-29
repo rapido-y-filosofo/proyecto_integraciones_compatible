@@ -19,8 +19,14 @@ class SpiderGenealog(scrapy.Spider):
         # ruts_buscar = [
         #     '79.715.730-9',
         #     '77.796.890-4',
-        #     '10.453.263-2'
+        #     '10.453.263-2',
+        #     '91.502.000-3',
+        #     '76.339.682-7',
+        #     '76.133.399-2',
+        #     '59.077.290-9',
+        #     '76.128.840-7',
         # ]
+        
         proveedores_scraping = set(m.RutContacto.objects.all().values_list('rut', flat=True))
         organismos = set(m.Organismo.objects.exclude(rut_organismo='').values_list('rut_organismo', flat=True))
 
@@ -76,7 +82,7 @@ class SpiderGenealog(scrapy.Spider):
                 empresa_o_persona,
                 codigo,
                 'nombre-y-rut',
-                nombre_completo,
+                nombre_completo.replace('(', '-').replace(')', '-'),
                 rut_regex
             )
 
@@ -125,14 +131,109 @@ class SpiderGenealog(scrapy.Spider):
     def parse_detalle(self, response):
         tr_ocultos = response.xpath('//tr[@class="showOnAskTr"]')
         # print(len(tr_ocultos))
+        
+        datos_adicionales = response.meta.get('datos_adicionales')
+
+        if datos_adicionales['rubro'] == '':
+            try:
+                datos_adicionales['rubro'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Rubro")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
+        if datos_adicionales['subrubro'] == '':
+            try:
+                datos_adicionales['subrubro'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Subrubro")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        if datos_adicionales['actividad_economica'] == '':
+            try:
+                actividades_economicas = ''
+                divs = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Actividades Econ")]/following-sibling::td/div/div'
+                )
+                datos_adicionales['actividad_economica'] = ';'.join([div.xpath('./text()').get() for div in divs])    
+            except:
+                pass
+        
+        if datos_adicionales['fecha_inicio'] == '':
+            try:
+                datos_adicionales['fecha_inicio'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Fecha de Inicio")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
+        if datos_adicionales['region'] == '':
+            try:
+                datos_adicionales['region'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Región")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
+        if datos_adicionales['comuna'] == '':
+            try:
+                datos_adicionales['comuna'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Comuna")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
+        if datos_adicionales['tipo_contribuyente'] == '':
+            try:
+                datos_adicionales['tipo_contribuyente'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Tipo Contribuyente")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
+        if datos_adicionales['subtipo_contribuyente'] == '':
+            try:
+                datos_adicionales['subtipo_contribuyente'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Subtipo Contribuyente")]/following-sibling::td/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
+        if datos_adicionales['nombre_completo'] == '':
+            try:
+                datos_adicionales['nombre_completo'] = response.xpath(
+                    '//tbody[@id="results-content"]'
+                )[0].xpath(
+                    './/td[contains(text(), "Razón Social")]/following-sibling::td/h3/b/text()'
+                ).get().replace('\n', '')
+            except:
+                pass
+        
         item_rut = {
             'tipo_item': 'detalle_rut',
             'rut': response.meta.get('rut'),
             'encontrado': True,
             'datos_contacto': [],
-            'datos_adicionales': response.meta.get('datos_adicionales')
+            'datos_adicionales': datos_adicionales
         }
+
         for tr in tr_ocultos:
             item_rut['datos_contacto'].append(self.aux_tr_parse(tr))
-
+        
         yield item_rut
